@@ -23,7 +23,7 @@ class Logger:
     def __init__(
         self,
         name: str,
-        messages: list[Message],
+        messages: list[Message] = [],
         level: str = "INFO",
         verbosity: int = 0,
         filename: str | None = None,
@@ -88,6 +88,22 @@ class Logger:
 
         if message:
             message.log(*args, **kwargs)
+
+    def add_message(
+        self,
+        code: str,
+        description: str,
+        level: str,
+        verbosity: int = 0,
+        format: str = "{}",
+    ) -> None:
+        """
+        Adds a new message to the logger.
+
+        Args:
+            message (Message): The Message object to add.
+        """
+        self.messages.append(Message(format, code, description, level, verbosity))
 
     def __del__(self):
         """

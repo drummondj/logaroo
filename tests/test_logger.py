@@ -8,50 +8,58 @@ from src.logaroo import Logger, Message
 
 class TestLogger(unittest.TestCase):
     def setUp(self):
-        self.messages = [
-            Message(
-                format="Test message: {}",
-                code="TEST-001",
-                description="This is a test message.",
-                level="INFO",
-                verbosity=1,
-            )
-        ]
-
-        self.messages.append(
-            Message(
-                format="Test message: {}",
-                code="TEST-002",
-                description="This is another test message with level=ERROR.",
-                level="ERROR",
-                verbosity=1,
-            )
-        )
-
-        self.messages.append(
-            Message(
-                format="Test message: {}",
-                code="TEST-003",
-                description="This is another test message, with verbosity=2.",
-                level="ERROR",
-                verbosity=2,
-            )
-        )
-
-        self.messages.append(
-            Message(
-                format="Test message: {}",
-                code="TEST-004",
-                description="This is another test message, with level=DEBUG.",
-                level="DEBUG",
-                verbosity=1,
-            )
-        )
 
         self.logger = Logger(
             name="TestLogger",
-            messages=self.messages,
             level="INFO",
+            verbosity=1,
+        )
+
+        self.logger.add_message(
+            format="Test message: {}",
+            code="TEST-001",
+            description="This is a test message.",
+            level="INFO",
+            verbosity=1,
+        )
+
+        self.logger.add_message(
+            format="Test message: {}",
+            code="TEST-002",
+            description="This is another test message with level=ERROR.",
+            level="ERROR",
+            verbosity=1,
+        )
+
+        self.logger.add_message(
+            format="Test message: {}",
+            code="TEST-003",
+            description="This is another test message, with verbosity=2.",
+            level="ERROR",
+            verbosity=2,
+        )
+
+        self.logger.add_message(
+            format="Test message: {}",
+            code="TEST-004",
+            description="This is another test message, with level=DEBUG.",
+            level="DEBUG",
+            verbosity=1,
+        )
+
+        self.logger.add_message(
+            format="Syntax error on line {}:{}",
+            code="TEST-005",
+            description="Un-named argument format.",
+            level="ERROR",
+            verbosity=1,
+        )
+
+        self.logger.add_message(
+            format="value {value1} is larger than {value2}",
+            code="TEST-006",
+            description="Testing format with named arguments and specific types.",
+            level="CRITICAL",
             verbosity=1,
         )
 
@@ -59,7 +67,7 @@ class TestLogger(unittest.TestCase):
         self.assertEqual(self.logger.name, "TestLogger")
         self.assertEqual(self.logger.level, "INFO")
         self.assertEqual(self.logger.verbosity, 1)
-        self.assertEqual(len(self.logger.messages), 4)
+        self.assertEqual(len(self.logger.messages), 6)
         self.assertEqual(self.logger.filename, None)
 
     def test_log(self):
@@ -89,7 +97,7 @@ class TestLogger(unittest.TestCase):
             filename = f"{tempdir}/test.log"
             logger = Logger(
                 name="TestLogger",
-                messages=self.messages,
+                messages=self.logger.messages,
                 level="INFO",
                 verbosity=1,
                 filename=filename,
@@ -109,3 +117,22 @@ class TestLogger(unittest.TestCase):
                 output[1],
                 "ERROR: Test message: Hello, World! (TEST-002)\n",
             )
+
+    def test_log_syntax_error(self):
+        # Test that a syntax error in the message format raises an exception
+        with patch("sys.stdout", new_callable=StringIO) as f:
+            self.logger.log("TEST-005", "/this/is/a/test", 42)
+            output = f.getvalue().strip()
+        self.assertEqual(
+            output, "ERROR: Syntax error on line /this/is/a/test:42 (TEST-005)"
+        )
+
+    def test_log_with_named_arguments(self):
+        # Test that the message is logged with named arguments
+        with patch("sys.stdout", new_callable=StringIO) as f:
+            self.logger.log("TEST-006", value1=42, value2=24)
+            output = f.getvalue().strip()
+        self.assertEqual(
+            output,
+            "CRITICAL: value 42 is larger than 24 (TEST-006)",
+        )

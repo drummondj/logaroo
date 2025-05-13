@@ -14,4 +14,41 @@ Feature list (under development):
 
 1. Documented message structure
 2. Log to a file, stream, stdout/err or a combination of them
-3. 
+
+## Usage
+
+To use Logaroo, create a `logger` module in your Python package containing:
+
+**my_logger.py**
+```
+import logaroo
+
+my_logger = logaroo.Logger(
+    level = "INFO",
+    verbosity = 1,
+)
+
+my_logger.add_message(
+    level="ERROR",
+    code="ERR-001",
+    description="This is a basic error message with no special formatting",
+)
+
+my_logger.add_message(
+    level="WARNING",
+    code="VAL-001",
+    format="Value {value1} is larger than {value2}",
+    description="A warning message with named parameters",
+)
+```
+
+Then from anywhere in you application code:
+
+```
+from src.my_logger import my_logger
+
+my_logger.log("ERR-001", "Something went wrong")
+my_logger.log("VAL-001", 10, 9)
+
+```
+

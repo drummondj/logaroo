@@ -3,6 +3,7 @@ from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
+from logaroo.exceptions import LogarooMissingCodeException
 from src.logaroo import Logger, Message
 
 
@@ -136,3 +137,8 @@ class TestLogger(unittest.TestCase):
             output,
             "CRITICAL: value 42 is larger than 24 (TEST-006)",
         )
+
+    def test_missing_code_exception(self):
+        # Test that a missing code raises an exception
+        with self.assertRaises(LogarooMissingCodeException):
+            self.logger.log("TEST-999")

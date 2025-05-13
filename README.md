@@ -17,10 +17,12 @@ Feature list (under development):
 
 ## Usage
 
+### Basic examples
+
 To use Logaroo, create a `logger` module in your Python package containing:
 
 **my_logger.py**
-```
+```python
 import logaroo
 
 my_logger = logaroo.Logger(
@@ -44,11 +46,21 @@ my_logger.add_message(
 
 Then from anywhere in you application code:
 
-```
-from src.my_logger import my_logger
+```python
+from my_logger import my_logger
 
 my_logger.log("ERR-001", "Something went wrong")
-my_logger.log("VAL-001", 10, 9)
-
+my_logger.log("VAL-001", value1=10, value2=9)
 ```
 
+### Logging to a file and stdout
+
+To log to a file, just add the filename parameter:
+
+```python
+my_logger = logaroo.Logger(
+    level = "INFO",
+    verbosity = 1,
+    filename="my_logger.log",
+)
+```

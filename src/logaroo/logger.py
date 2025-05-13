@@ -1,3 +1,4 @@
+from logaroo.exceptions import LogarooMissingCodeException
 from src.logaroo.message import Message
 
 ORDERED_LEVELS = [
@@ -61,6 +62,9 @@ class Logger:
         Returns:
             Message | None: The corresponding Message object or None if not found.
         """
+
+        if code not in [message.code for message in self.messages]:
+            raise LogarooMissingCodeException(code)
 
         for message in self.messages:
             if message.code == code:

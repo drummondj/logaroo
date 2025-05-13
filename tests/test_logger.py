@@ -1,4 +1,5 @@
 from io import StringIO
+from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
 
@@ -59,6 +60,7 @@ class TestLogger(unittest.TestCase):
         self.assertEqual(self.logger.level, "INFO")
         self.assertEqual(self.logger.verbosity, 1)
         self.assertEqual(len(self.logger.messages), 4)
+        self.assertEqual(self.logger.filename, None)
 
     def test_log(self):
         # Test that stdout contains the expected message
@@ -80,3 +82,30 @@ class TestLogger(unittest.TestCase):
             self.logger.log("TEST-003", "Hello, World!")
             output = f.getvalue().strip()
         self.assertEqual(output, "")
+
+    def test_log_to_file(self):
+        # Create a temporary directory
+        with TemporaryDirectory() as tempdir:
+            filename = f"{tempdir}/test.log"
+            logger = Logger(
+                name="TestLogger",
+                messages=self.messages,
+                level="INFO",
+                verbosity=1,
+                filename=filename,
+            )
+            with patch("sys.stdout", new_callable=StringIO) as f:
+                logger.log("TEST-001", "Hello, World!")
+                logger.log("TEST-002", "Hello, World!")
+            logger.__del__()  # Close the file handle
+
+            # Check the contents of the log file
+            with open(filename, "r") as f:
+                output = f.readlines()
+            self.assertEqual(
+                output[0], "INFO: Test message: Hello, World! (TEST-001)\n"
+            )
+            self.assertEqual(
+                output[1],
+                "ERROR: Test message: Hello, World! (TEST-002)\n",
+            )

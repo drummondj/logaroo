@@ -26,6 +26,7 @@ class Logger:
         messages: list[Message],
         level: str = "INFO",
         verbosity: int = 0,
+        filename: str | None = None,
     ) -> None:
         """
         Initializes the Logger instance.
@@ -39,6 +40,13 @@ class Logger:
         self.messages = messages
         self.level = level
         self.verbosity = verbosity
+        self.filename = filename
+
+        if self.filename:
+            self.file_handle = open(self.filename, "w")
+        else:
+            self.file_handle = None
+
         # loggers[name] = self
 
     def _get_message(self, code: str) -> Message | None:
@@ -74,8 +82,20 @@ class Logger:
             **kwargs: Keyword arguments to format the message.
         """
         message = self._get_message(code)
+
+        if self.file_handle:
+            kwargs["file_handle"] = self.file_handle
+
         if message:
             message.log(*args, **kwargs)
+
+    def __del__(self):
+        """
+        Cleans up the logger instance.
+        Closes the file handle if it was opened.
+        """
+        if self.file_handle:
+            self.file_handle.close()
 
 
 # loggers: dict[str, Logger] = {}

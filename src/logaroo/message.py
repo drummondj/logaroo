@@ -1,4 +1,5 @@
 from abc import ABC
+from io import StringIO
 
 
 class Message(ABC):
@@ -14,7 +15,12 @@ class Message(ABC):
     """
 
     def __init__(
-        self, format: str, code: str, description: str, level: str, verbosity: int = 0
+        self,
+        format: str,
+        code: str,
+        description: str,
+        level: str,
+        verbosity: int = 0,
     ) -> None:
         """
         Initializes the Message instance.
@@ -41,4 +47,10 @@ class Message(ABC):
             **kwargs: Keyword arguments to format the message.
         """
         message = self.format.format(*args, **kwargs)
-        print(f"{self.level}: {message} ({self.code})")
+        output = f"{self.level}: {message} ({self.code})"
+        print(output)
+
+        file_handle = kwargs.get("file_handle")
+        if file_handle:
+            file_handle.write(output + "\n")
+            file_handle.flush()

@@ -5,6 +5,7 @@ from unittest.mock import patch
 import unittest.util
 
 from logaroo import Logger, Level, LogarooMissingCodeException
+from logaroo.exceptions import LogarooDuplicateCodeException
 
 unittest.util._MAX_LENGTH = 2000
 
@@ -206,3 +207,49 @@ class TestLogger(unittest.TestCase):
             + "INFO: Test message: Hello, World! 1 (TEST-001)\n"
             + "WARNING: Maximum number of messages (2) reached for code TEST-001.\n",
         )
+
+    def test_duplicate_code_exception(self):
+        # Test that a duplicate code raises an exception
+        with self.assertRaises(LogarooDuplicateCodeException):
+            self.logger.add_message(
+                format="Duplicate message: {}",
+                code="TEST-001",
+                description="This is a duplicate message.",
+                level=Level.INFO,
+                verbosity=1,
+            )
+
+    def test_get_summary(self):
+
+        # Test that the logger returns a summary of the logged message entries
+        with patch("sys.stdout", new_callable=StringIO) as f:
+            self.logger.level = Level.DEBUG
+            self.logger.verbosity = 999
+            self.logger.log("TEST-001", "Hello, World!")
+            self.logger.log("TEST-001", "Hello, World!")
+            self.logger.log("TEST-002", "Hello, World!")
+            self.logger.log("TEST-003", "Hello, World!")
+            self.logger.log("TEST-004", "Hello, World!")
+            self.logger.log("TEST-005", 2, 1)
+            self.assertEqual(
+                len(self.logger.entries),
+                6,
+            )
+        summary = self.logger.get_summary()
+
+        expected_output = (
+            "Message summary:\n"
+            "  DEBUG = 1\n"
+            "  INFO = 2\n"
+            "  WARNING = 0\n"
+            "  ERROR = 3\n"
+            "  CRITICAL = 0\n"
+            "\n"
+            "Message codes:\n"
+            "  TEST-001: Test message: {} = 2\n"
+            "  TEST-002: Test message: {} = 1\n"
+            "  TEST-003: Test message: {} = 1\n"
+            "  TEST-004: Test message: {} = 1\n"
+            "  TEST-005: Syntax error on line {}:{} = 1"
+        )
+        self.assertEqual(summary, expected_output)

@@ -1,5 +1,6 @@
 from datetime import datetime
 from logaroo import LogarooMissingCodeException, Level, Message
+from logaroo.exceptions import LogarooDuplicateCodeException
 
 ORDERED_LEVELS = [
     Level.DEBUG,
@@ -48,7 +49,6 @@ class Logger:
             max_messages (int, optional): The maximum number of messages to log per code. Defaults to 100.
         """
         self.name = name
-        self.messages = []
         self.level = level
         self.verbosity = verbosity
         self.filename = filename
@@ -56,6 +56,7 @@ class Logger:
         self.with_timestamp = with_timestamp
         self.max_messages = max_messages
         self.max_messages_previously_met_for_code = []
+        self.messages = []
 
         if self.filename:
             self.file_handle = open(self.filename, "w")
@@ -113,29 +114,31 @@ class Logger:
         """
         message = self._get_message(code)
 
+        context = kwargs.copy()
+
         if message:
             if self.file_handle:
-                kwargs["file_handle"] = self.file_handle
+                context["file_handle"] = self.file_handle
 
-            kwargs["stdout"] = self.stdout
+            context["stdout"] = self.stdout
 
             timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
             if self.with_timestamp:
-                kwargs["timestamp"] = timestamp
+                context["timestamp"] = timestamp
 
-            kwargs["max_messages"] = self.max_messages
-            kwargs["max_messages_reached"] = False
-            kwargs["max_messages_previously_met_for_code"] = False
+            context["max_messages"] = self.max_messages
+            context["max_messages_reached"] = False
+            context["max_messages_previously_met_for_code"] = False
 
             entry_count = self._get_entry_count_for_code(code)
-            if entry_count >= self.max_messages:
-                kwargs["max_messages_reached"] = True
-                kwargs["max_messages_previously_met_for_code"] = (
+            if entry_count >= self.max_messages or self.max_messages == -1:
+                context["max_messages_reached"] = True
+                context["max_messages_previously_met_for_code"] = (
                     code in self.max_messages_previously_met_for_code
                 )
                 self.max_messages_previously_met_for_code.append(code)
 
-            output: str = message.log(*args, **kwargs)
+            output: str = message.log(*args, **context)
             self.entries.append(Entry(output, message, timestamp))
 
     def add_message(
@@ -152,7 +155,18 @@ class Logger:
         Args:
             message (Message): The Message object to add.
         """
-        self.messages.append(Message(format, code, description, level, verbosity))
+        self._add_message_object(Message(format, code, description, level, verbosity))
+
+    def _add_message_object(self, message: Message) -> None:
+        """
+        Adds a new message to the logger.
+
+        Args:
+            message (Message): The Message object to add.
+        """
+        if message.code in [m.code for m in self.messages]:
+            raise LogarooDuplicateCodeException(message.code)
+        self.messages.append(message)
 
     def add_messages(
         self,
@@ -165,7 +179,7 @@ class Logger:
             messages (list[Message]): A list of Message objects to add.
         """
         for message in messages:
-            self.messages.append(message)
+            self._add_message_object(message)
 
     def __del__(self):
         """
@@ -174,6 +188,36 @@ class Logger:
         """
         if self.file_handle:
             self.file_handle.close()
+
+    def get_summary(self) -> str:
+        """
+        Returns a summary of the logged message entries.
+
+        Returns:
+            str: A summary of the logged message entries.
+        """
+        summary = "Message summary:\n"
+        for level in ORDERED_LEVELS:
+            count = len(
+                [entry for entry in self.entries if entry.message.level == level]
+            )
+            summary += f"  {level.name} = {count}\n"
+
+        summary += "\n"
+        summary += "Message codes:\n"
+        codes: dict[str, list[Message]] = {}
+        for entry in self.entries:
+            code = entry.message.code
+            if code not in codes:
+                codes[code] = []
+            codes[code].append(entry.message)
+
+        for code, messages in codes.items():
+            count = len(messages)
+            first_message: Message = messages[0]
+            summary += f"  {code}: {first_message.format} = {count}\n"
+
+        return summary.strip()
 
 
 class Entry:

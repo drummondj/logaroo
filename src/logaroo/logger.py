@@ -1,12 +1,12 @@
-from logaroo.exceptions import LogarooMissingCodeException
-from src.logaroo.message import Message
+from datetime import datetime
+from logaroo import LogarooMissingCodeException, Level, Message
 
 ORDERED_LEVELS = [
-    "DEBUG",
-    "INFO",
-    "WARNING",
-    "ERROR",
-    "CRITICAL",
+    Level.DEBUG,
+    Level.INFO,
+    Level.WARNING,
+    Level.ERROR,
+    Level.CRITICAL,
 ]
 
 
@@ -16,18 +16,24 @@ class Logger:
 
     Attributes:
         name (str): The name of the logger.
-        level (str): The log level (e.g., INFO, WARNING, ERROR).
-        verbosity (int): The verbosity level of the logger.
         messages (list): A list of log messages associated with the logger.
+        level (Level): The log level (e.g., INFO, WARNING, ERROR). Defaults to "INFO".
+        verbosity (int): The verbosity level of the logger. Defaults to 0.
+        filename (str | None): The name of the file to log messages to. Defaults to None.
+        stdout (bool): Whether to log to stdout. Defaults to True.
+        with_timestamp (bool): Whether to include a timestamp in the log messages. Defaults to False.
+        max_messages (int): The maximum number of messages to log per code. Defaults to 100.
     """
 
     def __init__(
         self,
         name: str,
-        messages: list[Message] = [],
-        level: str = "INFO",
+        level: Level = Level.INFO,
         verbosity: int = 0,
         filename: str | None = None,
+        stdout: bool = True,
+        with_timestamp: bool = False,
+        max_messages: int = 100,
     ) -> None:
         """
         Initializes the Logger instance.
@@ -36,19 +42,27 @@ class Logger:
             name (str): The name of the logger.
             level (str): The log level (e.g., INFO, WARNING, ERROR). Defaults to "INFO".
             verbosity (int, optional): The verbosity level of the logger. Defaults to 0.
+            filename (str | None, optional): The name of the file to log messages to. Defaults to None.
+            stdout (bool, optional): Whether to log to stdout. Defaults to True.
+            with_timestamp (bool, optional): Whether to include a timestamp in the log messages. Defaults to False.
+            max_messages (int, optional): The maximum number of messages to log per code. Defaults to 100.
         """
         self.name = name
-        self.messages = messages
+        self.messages = []
         self.level = level
         self.verbosity = verbosity
         self.filename = filename
+        self.stdout = stdout
+        self.with_timestamp = with_timestamp
+        self.max_messages = max_messages
+        self.max_messages_previously_met_for_code = []
 
         if self.filename:
             self.file_handle = open(self.filename, "w")
         else:
             self.file_handle = None
 
-        # loggers[name] = self
+        self.entries = []
 
     def _get_message(self, code: str) -> Message | None:
         """
@@ -75,6 +89,18 @@ class Logger:
                         return message
         return
 
+    def _get_entry_count_for_code(self, code: str) -> int:
+        """
+        Retrieves the count of log entries for a specific code.
+
+        Args:
+            code (str): The code associated with the log message.
+
+        Returns:
+            int: The count of log entries for the specified code.
+        """
+        return len([entry for entry in self.entries if entry.message.code == code])
+
     def log(self, code: str, *args, **kwargs) -> None:
         """
         Logs a message with the given code and arguments.
@@ -87,17 +113,36 @@ class Logger:
         """
         message = self._get_message(code)
 
-        if self.file_handle:
-            kwargs["file_handle"] = self.file_handle
-
         if message:
-            message.log(*args, **kwargs)
+            if self.file_handle:
+                kwargs["file_handle"] = self.file_handle
+
+            kwargs["stdout"] = self.stdout
+
+            timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z")
+            if self.with_timestamp:
+                kwargs["timestamp"] = timestamp
+
+            kwargs["max_messages"] = self.max_messages
+            kwargs["max_messages_reached"] = False
+            kwargs["max_messages_previously_met_for_code"] = False
+
+            entry_count = self._get_entry_count_for_code(code)
+            if entry_count >= self.max_messages:
+                kwargs["max_messages_reached"] = True
+                kwargs["max_messages_previously_met_for_code"] = (
+                    code in self.max_messages_previously_met_for_code
+                )
+                self.max_messages_previously_met_for_code.append(code)
+
+            output: str = message.log(*args, **kwargs)
+            self.entries.append(Entry(output, message, timestamp))
 
     def add_message(
         self,
         code: str,
         description: str,
-        level: str,
+        level: Level,
         verbosity: int = 0,
         format: str = "{}",
     ) -> None:
@@ -109,6 +154,19 @@ class Logger:
         """
         self.messages.append(Message(format, code, description, level, verbosity))
 
+    def add_messages(
+        self,
+        messages: list[Message],
+    ) -> None:
+        """
+        Adds a list of messages to the logger.
+
+        Args:
+            messages (list[Message]): A list of Message objects to add.
+        """
+        for message in messages:
+            self.messages.append(message)
+
     def __del__(self):
         """
         Cleans up the logger instance.
@@ -118,4 +176,17 @@ class Logger:
             self.file_handle.close()
 
 
-# loggers: dict[str, Logger] = {}
+class Entry:
+    """
+    Represents a log entry with it output, original message object and a timestamp.
+
+    Attributes:
+        output (str): The formatted log message.
+        message (Message): The original message object.
+        timestamp (str): The timestamp when the log entry was created.
+    """
+
+    def __init__(self, output: str, message: Message, timestamp: str):
+        self.output = output
+        self.message = message
+        self.timestamp = timestamp

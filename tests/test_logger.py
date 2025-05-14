@@ -2,17 +2,18 @@ from io import StringIO
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
+import unittest.util
 
-from logaroo.exceptions import LogarooMissingCodeException
-from src.logaroo import Logger, Message
+from logaroo import Logger, Level, LogarooMissingCodeException
+
+unittest.util._MAX_LENGTH = 2000
 
 
 class TestLogger(unittest.TestCase):
     def setUp(self):
 
-        self.logger = Logger(
+        self.logger: Logger = Logger(
             name="TestLogger",
-            level="INFO",
             verbosity=1,
         )
 
@@ -20,7 +21,7 @@ class TestLogger(unittest.TestCase):
             format="Test message: {}",
             code="TEST-001",
             description="This is a test message.",
-            level="INFO",
+            level=Level.INFO,
             verbosity=1,
         )
 
@@ -28,7 +29,7 @@ class TestLogger(unittest.TestCase):
             format="Test message: {}",
             code="TEST-002",
             description="This is another test message with level=ERROR.",
-            level="ERROR",
+            level=Level.ERROR,
             verbosity=1,
         )
 
@@ -36,7 +37,7 @@ class TestLogger(unittest.TestCase):
             format="Test message: {}",
             code="TEST-003",
             description="This is another test message, with verbosity=2.",
-            level="ERROR",
+            level=Level.ERROR,
             verbosity=2,
         )
 
@@ -44,7 +45,7 @@ class TestLogger(unittest.TestCase):
             format="Test message: {}",
             code="TEST-004",
             description="This is another test message, with level=DEBUG.",
-            level="DEBUG",
+            level=Level.DEBUG,
             verbosity=1,
         )
 
@@ -52,7 +53,7 @@ class TestLogger(unittest.TestCase):
             format="Syntax error on line {}:{}",
             code="TEST-005",
             description="Un-named argument format.",
-            level="ERROR",
+            level=Level.ERROR,
             verbosity=1,
         )
 
@@ -60,13 +61,13 @@ class TestLogger(unittest.TestCase):
             format="value {value1} is larger than {value2}",
             code="TEST-006",
             description="Testing format with named arguments and specific types.",
-            level="CRITICAL",
+            level=Level.CRITICAL,
             verbosity=1,
         )
 
     def test_initialization(self):
         self.assertEqual(self.logger.name, "TestLogger")
-        self.assertEqual(self.logger.level, "INFO")
+        self.assertEqual(self.logger.level, Level.INFO)
         self.assertEqual(self.logger.verbosity, 1)
         self.assertEqual(len(self.logger.messages), 6)
         self.assertEqual(self.logger.filename, None)
@@ -98,11 +99,10 @@ class TestLogger(unittest.TestCase):
             filename = f"{tempdir}/test.log"
             logger = Logger(
                 name="TestLogger",
-                messages=self.logger.messages,
-                level="INFO",
                 verbosity=1,
                 filename=filename,
             )
+            logger.add_messages(self.logger.messages)
             with patch("sys.stdout", new_callable=StringIO) as f:
                 logger.log("TEST-001", "Hello, World!")
                 logger.log("TEST-002", "Hello, World!")
@@ -142,3 +142,67 @@ class TestLogger(unittest.TestCase):
         # Test that a missing code raises an exception
         with self.assertRaises(LogarooMissingCodeException):
             self.logger.log("TEST-999")
+
+    def test_file_only(self):
+        # Test that the logger only logs to a file
+        with TemporaryDirectory() as tempdir:
+            filename = f"{tempdir}/test.log"
+            logger = Logger(
+                name="TestLogger",
+                verbosity=1,
+                filename=filename,
+                stdout=False,
+            )
+            logger.add_messages(self.logger.messages)
+            with patch("sys.stdout", new_callable=StringIO) as f:
+                logger.log("TEST-001", "Hello, World!")
+                output = f.getvalue().strip()
+            self.assertEqual(output, "")
+            logger.__del__()
+
+            # Check the contents of the log file
+            with open(filename, "r") as f:
+                output = f.readlines()
+            self.assertEqual(
+                output[0], "INFO: Test message: Hello, World! (TEST-001)\n"
+            )
+
+    def test_log_with_timestamp(self):
+        # Test that the logger includes a timestamp in the log messages
+        logger = Logger(
+            name="TestLogger",
+            verbosity=1,
+            with_timestamp=True,
+        )
+        logger.add_messages(self.logger.messages)
+        with patch("sys.stdout", new_callable=StringIO) as f:
+            logger.log("TEST-001", "Hello, World!")
+            output = f.getvalue().strip()
+
+        # Get timestamp of last entry
+        timestamp = logger.entries[-1].timestamp
+        self.assertEqual(
+            output,
+            f"{timestamp} - INFO: Test message: Hello, World! (TEST-001)",
+        )
+
+    def test_max_messages(self):
+        # Test that the logger limits the number of messages logged per code
+        logger = Logger(
+            name="TestLogger",
+            verbosity=1,
+            max_messages=2,
+        )
+        logger.add_messages(self.logger.messages)
+        with patch("sys.stdout", new_callable=StringIO) as f:
+            for i in range(5):
+                logger.log("TEST-001", f"Hello, World! {i}")
+            output = f.getvalue()
+
+        # Check that only the first 2 messages are logged, along with a warning about truncated messages
+        self.assertEqual(
+            output,
+            "INFO: Test message: Hello, World! 0 (TEST-001)\n"
+            + "INFO: Test message: Hello, World! 1 (TEST-001)\n"
+            + "WARNING: Maximum number of messages (2) reached for code TEST-001.\n",
+        )

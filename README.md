@@ -12,8 +12,9 @@ This is useful for complex applications that have many different types of messag
 
 Feature list (under development):
 
-1. Documented message structure
-2. Log to a file, stream, stdout/err or a combination of them
+1. Documented message structure using codes
+2. Log to stdout, a file or both
+3. Control maximum message count per code
 
 ## Usage
 
@@ -26,8 +27,8 @@ To use Logaroo, create a `logger` module in your Python package containing:
 import logaroo
 
 my_logger = logaroo.Logger(
-    level = "INFO",
-    verbosity = 1,
+    level="INFO",
+    verbosity=1,
 )
 
 my_logger.add_message(
@@ -59,8 +60,8 @@ To log to a file, just add the filename parameter:
 
 ```python
 my_logger = logaroo.Logger(
-    level = "INFO",
-    verbosity = 1,
+    level="INFO",
+    verbosity=1,
     filename="my_logger.log",
 )
 ```

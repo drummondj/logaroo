@@ -1,7 +1,7 @@
 [project]
 name = "logaroo"
 version = "0.1.0"
-description = ""
+description = "Yet another logging package"
 authors = [
     {name = "John Dru",email = "john@muopia.com"}
 ]

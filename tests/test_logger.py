@@ -220,7 +220,6 @@ class TestLogger(unittest.TestCase):
             )
 
     def test_get_summary(self):
-
         # Test that the logger returns a summary of the logged message entries
         with patch("sys.stdout", new_callable=StringIO) as f:
             self.logger.level = Level.DEBUG

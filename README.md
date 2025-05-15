@@ -12,11 +12,12 @@ This is useful for complex applications that have many different types of messag
 
 Feature list (under development):
 
-1. Documented message structure using codes
-2. Log to stdout, a file or both
-3. Control maximum message count per code
-4. Add optional timestamps to messages
-5. Generate a message summary containing counts per level and code
+1. Documented message structure using codes.
+2. Log to stdout, a file or both.
+3. Control maximum message count per code.
+4. Add optional timestamps to messages.
+5. Generate a message summary containing counts per level and code.
+6. Serialize the logger information into JSON, for the purposes of documentation generation.
 
 ## Usage
 
@@ -118,3 +119,10 @@ Message codes:
   TEST-004: Test message: {} = 1
   TEST-005: Syntax error on line {}:{} = 1
 ```
+
+### Generating documentation for message codes
+
+You can generate a JSON representation of you logger using the `to_json()` method.
+
+Then using that method, you can generate documentation in any format you require.
+

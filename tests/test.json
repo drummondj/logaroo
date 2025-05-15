@@ -1,0 +1,53 @@
+{
+    "name": "TestLogger",
+    "level": "INFO",
+    "verbosity": 1,
+    "filename": null,
+    "stdout": true,
+    "with_timestamp": false,
+    "max_messages": 100,
+    "messages": [
+        {
+            "format": "Test message: {}",
+            "code": "TEST-001",
+            "description": "This is a test message.",
+            "level": "INFO",
+            "verbosity": 1
+        },
+        {
+            "format": "Test message: {}",
+            "code": "TEST-002",
+            "description": "This is another test message with level=ERROR.",
+            "level": "ERROR",
+            "verbosity": 1
+        },
+        {
+            "format": "Test message: {}",
+            "code": "TEST-003",
+            "description": "This is another test message, with verbosity=2.",
+            "level": "ERROR",
+            "verbosity": 2
+        },
+        {
+            "format": "Test message: {}",
+            "code": "TEST-004",
+            "description": "This is another test message, with level=DEBUG.",
+            "level": "DEBUG",
+            "verbosity": 1
+        },
+        {
+            "format": "Syntax error on line {}:{}",
+            "code": "TEST-005",
+            "description": "Un-named argument format.",
+            "level": "ERROR",
+            "verbosity": 1
+        },
+        {
+            "format": "value {value1} is larger than {value2}",
+            "code": "TEST-006",
+            "description": "Testing format with named arguments and specific types.",
+            "level": "CRITICAL",
+            "verbosity": 1
+        }
+    ]
+}

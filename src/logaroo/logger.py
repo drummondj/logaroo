@@ -1,4 +1,7 @@
 from datetime import datetime
+from io import TextIOWrapper
+import json
+from typing import Any
 from logaroo import LogarooMissingCodeException, Level, Message
 from logaroo.exceptions import LogarooDuplicateCodeException
 
@@ -48,22 +51,22 @@ class Logger:
             with_timestamp (bool, optional): Whether to include a timestamp in the log messages. Defaults to False.
             max_messages (int, optional): The maximum number of messages to log per code. Defaults to 100.
         """
-        self.name = name
-        self.level = level
-        self.verbosity = verbosity
-        self.filename = filename
-        self.stdout = stdout
-        self.with_timestamp = with_timestamp
-        self.max_messages = max_messages
-        self.max_messages_previously_met_for_code = []
-        self.messages = []
+        self.name: str = name
+        self.level: Level = level
+        self.verbosity: int = verbosity
+        self.filename: str | None = filename
+        self.stdout: bool = stdout
+        self.with_timestamp: bool = with_timestamp
+        self.max_messages: int = max_messages
+        self.max_messages_previously_met_for_code: list[str] = []
+        self.messages: list[Message] = []
 
         if self.filename:
-            self.file_handle = open(self.filename, "w")
+            self.file_handle: TextIOWrapper | None = open(self.filename, "w")
         else:
             self.file_handle = None
 
-        self.entries = []
+        self.entries: list[Entry] = []
 
     def _get_message(self, code: str) -> Message | None:
         """
@@ -102,7 +105,7 @@ class Logger:
         """
         return len([entry for entry in self.entries if entry.message.code == code])
 
-    def log(self, code: str, *args, **kwargs) -> None:
+    def log(self, code: str, *args, **kwargs) -> None:  # type: ignore
         """
         Logs a message with the given code and arguments.
 
@@ -114,7 +117,7 @@ class Logger:
         """
         message = self._get_message(code)
 
-        context = kwargs.copy()
+        context: dict[str, Any] = kwargs.copy()
 
         if message:
             if self.file_handle:
@@ -138,7 +141,7 @@ class Logger:
                 )
                 self.max_messages_previously_met_for_code.append(code)
 
-            output: str = message.log(*args, **context)
+            output: str = message.log(*args, **context)  # type: ignore
             self.entries.append(Entry(output, message, timestamp))
 
     def add_message(
@@ -218,6 +221,27 @@ class Logger:
             summary += f"  {code}: {first_message.format} = {count}\n"
 
         return summary.strip()
+
+    def to_json(self) -> str:
+        """
+        Converts the logger instance to a JSON document.
+
+        Returns:
+            str: A JSON representation of the logger instance.
+        """
+        return json.dumps(
+            {
+                "name": self.name,
+                "level": self.level.name,
+                "verbosity": self.verbosity,
+                "filename": self.filename,
+                "stdout": self.stdout,
+                "with_timestamp": self.with_timestamp,
+                "max_messages": self.max_messages,
+                "messages": [message.to_dict() for message in self.messages],
+            },
+            indent=4,
+        )
 
 
 class Entry:

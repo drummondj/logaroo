@@ -10,6 +10,9 @@ requires-python = ">=3.11"
 dependencies = [
     "packaging (>=25.0,<26.0)",
 ]
+license = "MIT"
+repository = "https://github.com/drummondj/logaroo"
+documentation = "https://github.com/drummondj/logaroo/blob/main/README.md"
 
 [tool.poetry]
 packages = [{include = "logaroo", from = "src"}]

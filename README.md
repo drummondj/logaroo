@@ -15,6 +15,8 @@ Feature list (under development):
 1. Documented message structure using codes
 2. Log to stdout, a file or both
 3. Control maximum message count per code
+4. Add optional timestamps to messages
+5. Generate a message summary containing counts per level and code
 
 ## Usage
 
@@ -45,7 +47,7 @@ my_logger.add_message(
 )
 ```
 
-Then from anywhere in you application code:
+Then from anywhere in your application code:
 
 ```python
 from my_logger import my_logger
@@ -60,8 +62,59 @@ To log to a file, just add the filename parameter:
 
 ```python
 my_logger = logaroo.Logger(
-    level="INFO",
-    verbosity=1,
     filename="my_logger.log",
 )
+```
+
+To suppress logging to stdout and just log to a file:
+
+```python
+my_logger = logaroo.Logger(
+    filename="my_logger.log",
+    stdout=False,
+)
+```
+
+### Maximum messages per code
+
+The default number of messages generated per code are 100. You can change this value or change to -1 for infinite messages:
+
+```python
+my_logger = logaroo.Logger(
+    max_messages=10
+)
+```
+
+### Timestamps
+
+You can add ISO formatted timestamps to the beginning of messages:
+
+```
+my_logger = logaroo.Logger(
+    with_timestamp=True,
+)
+```
+
+### Generating a summary
+
+You can generate a summary of message counts using the `get_summary()` method:
+
+```python
+print(my_logger.get_summary())
+```
+
+```
+Message summary:
+  DEBUG = 1
+  INFO = 2
+  WARNING = 0
+  ERROR = 3
+  CRITICAL = 0
+
+Message codes:
+  TEST-001: Test message: {} = 2
+  TEST-002: Test message: {} = 1
+  TEST-003: Test message: {} = 1
+  TEST-004: Test message: {} = 1
+  TEST-005: Syntax error on line {}:{} = 1
 ```

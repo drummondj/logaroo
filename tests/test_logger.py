@@ -1,17 +1,18 @@
+# type: ignore
+import filecmp
 from io import StringIO
+import os
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import patch
-import unittest.util
 
 from logaroo import Logger, Level, LogarooMissingCodeException
 from logaroo.exceptions import LogarooDuplicateCodeException
 
-unittest.util._MAX_LENGTH = 2000
-
 
 class TestLogger(unittest.TestCase):
     def setUp(self):
+        self.maxDiff = None
 
         self.logger: Logger = Logger(
             name="TestLogger",
@@ -252,3 +253,13 @@ class TestLogger(unittest.TestCase):
             "  TEST-005: Syntax error on line {}:{} = 1"
         )
         self.assertEqual(summary, expected_output)
+
+    def test_to_json(self):
+        # Test that the logger can be converted to JSON
+        fn = "tmp.json"
+        with open(fn, "w") as temp_file:
+            json_output = self.logger.to_json()
+            temp_file.write(json_output)
+
+        self.assertTrue(filecmp.cmp(fn, "tests/test.json"))
+        os.remove(fn)

@@ -1,3 +1,5 @@
+from io import StringIO
+from typing import Any
 from logaroo.level import Level
 
 
@@ -37,7 +39,7 @@ class Message:
         self.level = level
         self.verbosity = verbosity
 
-    def log(self, *args, **kwargs) -> str:
+    def log(self, *args, **kwargs) -> str:  # type: ignore
         """
         Logs the message with the given arguments.
 
@@ -48,16 +50,17 @@ class Message:
         Returns:
             str: The formatted log message.
         """
-        message = self.format.format(*args, **kwargs)
+        message = self.format.format(*args, **kwargs)  # type: ignore
 
         output = f"{self.level}: {message} ({self.code})"
 
-        max_messages_reached: bool = kwargs.get("max_messages_reached", False)
-        max_messages: int = kwargs.get("max_messages", 0)
+        max_messages_reached = bool(kwargs.get("max_messages_reached", False))  # type: ignore
+        max_messages: int = int(kwargs.get("max_messages", 0))  # type: ignore
 
-        max_messages_previously_met_for_code = kwargs.get(
-            "max_messages_previously_met_for_code", False
+        max_messages_previously_met_for_code: bool = bool(
+            kwargs.get("max_messages_previously_met_for_code", False)  # type: ignore
         )
+
         if max_messages_previously_met_for_code:
             output_to_print = ""
         else:
@@ -66,19 +69,35 @@ class Message:
             else:
                 output_to_print = output
 
-        timestamp: str | None = kwargs.get("timestamp")
+        timestamp: str | None = kwargs.get("timestamp")  # type: ignore
+
         if timestamp:
             output = f"{timestamp} - {output}"
             output_to_print = f"{timestamp} - {output_to_print}"
 
         if output_to_print != "":
-            stdout = kwargs.get("stdout", True)
+            stdout: bool = bool(kwargs.get("stdout", True))  # type: ignore
             if stdout:
                 print(output_to_print)
 
-            file_handle = kwargs.get("file_handle")
+            file_handle: StringIO = kwargs.get("file_handle")  # type: ignore
             if file_handle:
                 file_handle.write(output_to_print + "\n")
                 file_handle.flush()
 
         return output
+
+    def to_dict(self) -> dict[str, Any]:
+        """
+        Converts the Message instance to a dictionary.
+
+        Returns:
+            dict: A dictionary representation of the Message instance.
+        """
+        return {
+            "format": self.format,
+            "code": self.code,
+            "description": self.description,
+            "level": self.level.name,
+            "verbosity": self.verbosity,
+        }
